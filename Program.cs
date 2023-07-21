@@ -11,3 +11,5 @@ else
 {
     Console.WriteLine($"Unrecognized command {command}");
 }
+
+Database.TestDatabase();
