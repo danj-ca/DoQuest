@@ -5,11 +5,10 @@ if (string.Equals(command, "record"))
 {
     var taskName = commandArgs[0];
     var score = int.Parse(commandArgs[1]);
-    Console.WriteLine($"You want to record the task \"{taskName}\" worth {score} points!");
+    var result = Database.TestDatabase(taskName, score);
+    Console.WriteLine(result);
 }
 else 
 {
     Console.WriteLine($"Unrecognized command {command}");
 }
-
-Database.TestDatabase();
