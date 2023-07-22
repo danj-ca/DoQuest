@@ -3,6 +3,8 @@ using Microsoft.Data.Sqlite;
 static class Database
 {
     const string DatabaseFileName = "test.sql";
+    const string ConnectionString = $"Data Source={DatabaseFileName}";
+    const string DatabaseVersion = "0.0.1";
     const string TasksTableDefinition = """
         CREATE TABLE tasks (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -11,13 +13,74 @@ static class Database
             score INTEGER NOT NULL
         );
     """;
+    /// <summary>
+    /// Since the purpose of this table is to store the current database version,
+    /// create the table and insert the version in one command
+    /// </summary>
+    const string VersionTableDefinition = """
+        CREATE TABLE version (
+            version_number TEXT NOT NULL
+        );
+        INSERT INTO version (version_number)
+        VALUES ($version_number);
+    """;
 
-    static void CreateTasksTable(string databaseName = ":memory:")
+    static bool DatabaseFileExists() => File.Exists(DatabaseFileName);
+    static (bool, string?) DatabaseVersionSet()
     {
-        using var connection = new SqliteConnection($"Data Source={databaseName}");
+        using var connection = new SqliteConnection(ConnectionString);
         connection.Open();
         var command = connection.CreateCommand();
-        command.CommandText = TasksTableDefinition;
+        command.CommandText = """
+            SELECT version_number
+            FROM version
+        """;
+        var versionNumber = command.ExecuteScalar() as string;
+        return (!string.IsNullOrWhiteSpace(versionNumber), versionNumber);
+    }
+
+    static void InitializeDatabase()
+    {
+        CreateTasksTable();
+        CreateVersionTable();
+    }
+
+    static void ValidateDatabase()
+    {
+        var (versionExists, versionNumber) = DatabaseVersionSet();
+
+        if (!versionExists)
+        {
+            throw new InvalidDataException($"The database file {DatabaseFileName} exists, but isn't properly initialized. It doesn't contain a version number.");
+        }
+
+        if (!string.Equals(versionNumber, DatabaseVersion, StringComparison.CurrentCultureIgnoreCase))
+        {
+            throw new InvalidDataException($"The database file {DatabaseFileName} is version {versionNumber}, but the expected version is {DatabaseVersion}");
+        }
+    }
+
+    static void CreateTasksTable()
+    {
+        CreateTable(TasksTableDefinition);
+    }
+
+    static void CreateVersionTable()
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = VersionTableDefinition;
+        command.Parameters.AddWithValue("$version_number", DatabaseVersion);
+        command.ExecuteNonQuery();
+    }
+
+    static void CreateTable(string createSql)
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = createSql;
         command.ExecuteNonQuery();
     }
 
@@ -25,10 +88,16 @@ static class Database
 
     public static string TestDatabase(string name, int score)
     {
-        CreateTasksTable(DatabaseFileName);
-        InsertTask(name, score, DatabaseFileName);
+        if (!DatabaseFileExists())
+        {
+            InitializeDatabase();
+        }
 
-        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        ValidateDatabase();
+        
+        InsertTask(name, score);
+
+        using var connection = new SqliteConnection(ConnectionString);
         connection.Open();
         var queryCommand = connection.CreateCommand();
         queryCommand.CommandText = """
@@ -43,7 +112,7 @@ static class Database
         }
 
         return result;
-        
+
         // last thing to create is a "Version" table
         // then check if it exists to know that a given
         // database file has already been initialized.
@@ -55,10 +124,9 @@ static class Database
     /// </summary>
     /// <param name="name">Description of the task</param>
     /// <param name="score">The task's "score" value as a positive integer</param>
-    /// <param name="databaseName">Filename of the target database; if not specified, in-memory database is used</param>
-    static void InsertTask(string name, int score, string databaseName = ":memory:")
+    static void InsertTask(string name, int score)
     {
-        using var connection = new SqliteConnection($"Data Source={databaseName}");
+        using var connection = new SqliteConnection(ConnectionString);
         connection.Open();
         var command = connection.CreateCommand();
         command.CommandText = """
