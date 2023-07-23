@@ -1,10 +1,57 @@
+using System.Text;
 using Microsoft.Data.Sqlite;
 
 static class Database
 {
     const string DatabaseFileName = "test.sql";
     const string ConnectionString = $"Data Source={DatabaseFileName}";
-    const string DatabaseVersion = "0.0.1";
+    const string DatabaseVersion = "0.1.0";
+    const string StaticLevelsTableDefinition = """
+        CREATE TABLE levels (
+            level INTEGER NOT NULL PRIMARY KEY,
+            score_required INTEGER NOT NULL
+        );
+    """;
+    // TODO If we're gonna define static contents in these strings,
+    //      they should probably get stuck in their own files at some point.
+    const string StaticPowersTableDefinition = """
+        CREATE TABLE powers (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            colour TEXT NOT NULL
+        );
+        INSERT INTO powers (name, colour)
+        VALUES ('Creation', 'Cyan'),
+               ('Destruction', 'Magenta'),
+               ('Light', 'White'),
+               ('Shadow', 'Black'),
+               ('Air', 'Yellow'),
+               ('Earth', 'Green'),
+               ('Fire', 'Red'),
+               ('Water', 'Blue')
+    """;
+    const string StaticTreasureTableDefinition = """
+        CREATE TABLE treasure (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL,
+            min_score INTEGER NOT NULL,
+            max_score INTEGER NOT NULL,
+            value INTEGER NOT NULL,
+            power_id INTEGER REFERENCES powers (id),
+            class_id INTEGER REFERENCES class (id)
+        );
+    """;
+    const string StaticClassTableDefinition = """
+        CREATE TABLE class (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL,
+            min_level INTEGER,
+            power_id INTEGER REFERENCES powers (id),
+            parent_class_id INTEGER REFERENCES class (id)
+        );
+    """;
     const string TasksTableDefinition = """
         CREATE TABLE tasks (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -42,6 +89,7 @@ static class Database
     static void InitializeDatabase()
     {
         CreateTasksTable();
+        CreateStaticTables();
         CreateVersionTable();
     }
 
@@ -64,6 +112,43 @@ static class Database
     {
         CreateTable(TasksTableDefinition);
     }
+
+    static void CreateStaticTables()
+    {
+        CreateTable(StaticLevelsTableDefinition);
+        FillLevelsTable();
+        CreateTable(StaticPowersTableDefinition);
+        CreateTable(StaticClassTableDefinition);
+        CreateTable(StaticTreasureTableDefinition);
+        FillTreasureTable();
+    }
+
+    static void FillLevelsTable()
+    {
+        var valuesToInsert = new List<string>() { "(1,0)" };
+        var sb = new StringBuilder();
+        sb.AppendLine("INSERT INTO levels (level, score_required)");
+        sb.AppendLine("VALUES");
+        
+        // Current algo
+        var meanPointsPerDay = 68.9;
+        var avgDaysPerLevel = 3.65;
+        var tweakableLevellingConstant = 24.25;
+        for (int i = 2; i < 101; i++)
+        {
+            var score_required = (int)Math.Ceiling(meanPointsPerDay * avgDaysPerLevel * (1 + i / tweakableLevellingConstant));
+            valuesToInsert.Add($"({i},{score_required})");
+        }
+        sb.AppendJoin(',', valuesToInsert);
+
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = sb.ToString();
+        command.ExecuteNonQuery();
+    }
+    static void FillTreasureTable() { }
+
 
     static void CreateVersionTable()
     {
