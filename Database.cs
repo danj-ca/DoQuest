@@ -1,6 +1,9 @@
 using System.Text;
 using Microsoft.Data.Sqlite;
 
+// TODO Pull initialization stuff into its own class, 
+//      only run it on startup if database doesn't exist
+//      (maybe ask user to confirm)
 static class Database
 {
     const string DatabaseFileName = "test.sql";
