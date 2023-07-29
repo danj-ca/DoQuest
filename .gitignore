@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Test database (might exclude all databases later, I don't think they belong in the repo)
+test.sql
+
 # User-specific files
 *.rsuser
 *.suo

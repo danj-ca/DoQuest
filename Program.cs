@@ -34,6 +34,8 @@ Application.Shutdown();
 // Define a top-level window
 public class ExampleWindow : Window 
 {
+    internal TextField _taskText;
+    internal TextField _scoreText;
     public ExampleWindow()
     {
         Title = "Example-fu";
@@ -43,15 +45,22 @@ public class ExampleWindow : Window
             Text = "Record a task:"
         };
 
-        var taskText = new TextField()
+        _taskText = new TextField()
         {
             X = Pos.Right(recordLabel) + 1,
             Width = Dim.Percent(75, true)
         };
 
-        var scoreText = new TextField()
+        var scoreLabel = new Label()
         {
-            X = Pos.Right(taskText) + 1,
+            Text = "Score:",
+            X = Pos.Right(_taskText) + 1,
+            Width = Dim.Fill(2)
+        };
+
+        _scoreText = new TextField()
+        {
+            X = Pos.Right(scoreLabel) + 1,
             Width = Dim.Fill(2)
         };
 
@@ -59,7 +68,7 @@ public class ExampleWindow : Window
         {
             Text = "Add Task",
             X = Pos.Center(),
-            Y = Pos.Bottom(taskText)
+            Y = Pos.Bottom(_taskText)
         };
 
         addButton.Clicked += () => RecordNewTask();
@@ -68,17 +77,30 @@ public class ExampleWindow : Window
         {
             Text = "Quit",
             X = Pos.Right(addButton) + 1,
-            Y = Pos.Bottom(taskText)
+            Y = Pos.Bottom(_taskText)
         };
 
         quitButton.Clicked += () => Application.RequestStop();
 
-        Add(recordLabel, taskText, scoreText, addButton, quitButton);
+        Add(recordLabel, _taskText, scoreLabel, _scoreText, addButton, quitButton);
     }
 
     private void RecordNewTask()
     {
-        // TODO Validate task fields
-        throw new NotImplementedException();
+        // Validate task fields
+        if (string.IsNullOrWhiteSpace(_taskText.Text.ToString()))
+        {
+            throw new InvalidDataException($"Missing task name! You entered '{_taskText.Text}'");
+        }
+        if (int.TryParse(_scoreText.Text.ToString(), out int scoreValue))
+        {
+            throw new InvalidDataException($"Missing or non-numeric score! You entered '{_scoreText.Text}'");
+        }
+
+        // TODO Actually entering the task into the database layer goes here
+
+        _taskText.Clear();
+        _scoreText.Clear();
+        _taskText.SetFocus();
     }
 }
