@@ -212,7 +212,7 @@ static class Database
     /// </summary>
     /// <param name="name">Description of the task</param>
     /// <param name="score">The task's "score" value as a positive integer</param>
-    static void InsertTask(string name, int score)
+    public static void InsertTask(string name, int score)
     {
         using var connection = new SqliteConnection(ConnectionString);
         connection.Open();

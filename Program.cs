@@ -48,20 +48,19 @@ public class ExampleWindow : Window
         _taskText = new TextField()
         {
             X = Pos.Right(recordLabel) + 1,
-            Width = Dim.Percent(75, true)
+            Width = 50
         };
 
         var scoreLabel = new Label()
         {
             Text = "Score:",
-            X = Pos.Right(_taskText) + 1,
-            Width = Dim.Fill(2)
+            X = Pos.Right(_taskText) + 1
         };
 
         _scoreText = new TextField()
         {
             X = Pos.Right(scoreLabel) + 1,
-            Width = Dim.Fill(2)
+            Width = 10
         };
 
         var addButton = new Button()
@@ -92,15 +91,18 @@ public class ExampleWindow : Window
         {
             throw new InvalidDataException($"Missing task name! You entered '{_taskText.Text}'");
         }
-        if (int.TryParse(_scoreText.Text.ToString(), out int scoreValue))
+        var taskValue = (string)_taskText.Text;
+
+        if (!int.TryParse(_scoreText.Text.ToString(), out int scoreValue))
         {
             throw new InvalidDataException($"Missing or non-numeric score! You entered '{_scoreText.Text}'");
         }
 
         // TODO Actually entering the task into the database layer goes here
+        Database.InsertTask(taskValue, scoreValue);
 
-        _taskText.Clear();
-        _scoreText.Clear();
+        _taskText.Text = string.Empty;
+        _scoreText.Text = string.Empty;
         _taskText.SetFocus();
     }
 }
