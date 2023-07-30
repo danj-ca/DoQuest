@@ -84,7 +84,6 @@ public class ExampleWindow : Window
 
         _messageArea = new Label()
         {
-            X = Pos.Center(),
             Y = Pos.AnchorEnd(1)
         };
 
@@ -96,6 +95,8 @@ public class ExampleWindow : Window
         // Validate task fields
         if (string.IsNullOrWhiteSpace(_taskText.Text.ToString()))
         {
+            var redColour = Application.Driver.MakeColor(Color.White, Color.BrightRed);
+            _messageArea.ColorScheme = new ColorScheme() { Normal = redColour };
             _messageArea.Text = $"Missing task name! You entered '{_taskText.Text}'";
             ResetForm();
             // TODO Multiple returns, though? Really?
@@ -106,6 +107,8 @@ public class ExampleWindow : Window
         if (string.IsNullOrWhiteSpace(_scoreText.Text.ToString()) ||
             !int.TryParse(_scoreText.Text.ToString(), out int scoreValue))
         {
+            var redColour = Application.Driver.MakeColor(Color.White, Color.BrightRed);
+            _messageArea.ColorScheme = new ColorScheme() { Normal = redColour };
             _messageArea.Text = $"Missing or non-numeric score! You entered '{_scoreText.Text}'";
             ResetForm();
             return;
@@ -115,7 +118,8 @@ public class ExampleWindow : Window
         Database.InsertTask(taskValue, scoreValue);
 
         // TODO Maybe select it back out and print the result from the database here
-        // TODO How do I change the colours?
+        var greenColour = Application.Driver.MakeColor(Color.BrightYellow, Color.BrightGreen);
+        _messageArea.ColorScheme = new ColorScheme() { Normal = greenColour };
         _messageArea.Text = $"Added {taskValue} (score: {scoreValue}) successfully.";
         ResetForm();
     }
