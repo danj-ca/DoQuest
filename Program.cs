@@ -36,6 +36,7 @@ public class ExampleWindow : Window
 {
     internal TextField _taskText;
     internal TextField _scoreText;
+    internal Label _messageArea;
     public ExampleWindow()
     {
         Title = "Example-fu";
@@ -81,7 +82,13 @@ public class ExampleWindow : Window
 
         quitButton.Clicked += () => Application.RequestStop();
 
-        Add(recordLabel, _taskText, scoreLabel, _scoreText, addButton, quitButton);
+        _messageArea = new Label()
+        {
+            X = Pos.Center(),
+            Y = Pos.AnchorEnd(1)
+        };
+
+        Add(recordLabel, _taskText, scoreLabel, _scoreText, addButton, quitButton, _messageArea);
     }
 
     private void RecordNewTask()
@@ -89,18 +96,32 @@ public class ExampleWindow : Window
         // Validate task fields
         if (string.IsNullOrWhiteSpace(_taskText.Text.ToString()))
         {
-            throw new InvalidDataException($"Missing task name! You entered '{_taskText.Text}'");
+            _messageArea.Text = $"Missing task name! You entered '{_taskText.Text}'";
+            ResetForm();
+            // TODO Multiple returns, though? Really?
+            return;
         }
         var taskValue = (string)_taskText.Text;
 
-        if (!int.TryParse(_scoreText.Text.ToString(), out int scoreValue))
+        if (string.IsNullOrWhiteSpace(_scoreText.Text.ToString()) ||
+            !int.TryParse(_scoreText.Text.ToString(), out int scoreValue))
         {
-            throw new InvalidDataException($"Missing or non-numeric score! You entered '{_scoreText.Text}'");
+            _messageArea.Text = $"Missing or non-numeric score! You entered '{_scoreText.Text}'";
+            ResetForm();
+            return;
         }
 
-        // TODO Actually entering the task into the database layer goes here
+        // TODO Add error handling in case adding to the db doesn't work
         Database.InsertTask(taskValue, scoreValue);
 
+        // TODO Maybe select it back out and print the result from the database here
+        // TODO How do I change the colours?
+        _messageArea.Text = $"Added {taskValue} (score: {scoreValue}) successfully.";
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
         _taskText.Text = string.Empty;
         _scoreText.Text = string.Empty;
         _taskText.SetFocus();
