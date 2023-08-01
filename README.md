@@ -16,12 +16,14 @@ The app then keeps track of your cumulative score, and awards you new "levels" a
 
 I'd like to add...
 
-- Treasure: A set of (procedurally-generated, probably) items that you'll get rewarded for entering tasks, in addition to points, e.g. "Unusual Ruby of Wizard's Artifice" (yes, I played a lot of Diablo back in the day, why do you ask? 👹)
-- Character "Classes": I've always liked the mechanic (in games like Pokemon or Ogre Battle) where your character can "evolve" into a more interesting character class as they progress, e.g. "Adventurer" to "Wizard" to "Fire Magus".
-- Support for multiple "characters".
-  - The simple way: when you get your "character" to, say, Level 100, the app just starts a new one for you, and *that* character gets the points from now on.
-  - The more complicated way: The app can keep track of the "progress" of multiple "characters" at a time, and let you switch between them when you add a task, if you want to.
-- "Quests", i.e. tasks that the app will keep track of for you, and then you can log that you've completed them, or perhaps completed part of them.
+- [ ] Treasure: A set of (procedurally-generated, probably) items that you'll get rewarded for entering tasks, in addition to points, e.g. "Unusual Ruby of Wizard's Artifice" (yes, I played a lot of Diablo back in the day, why do you ask? 👹)
+- [ ] Character "Classes": I've always liked the mechanic (in games like Pokemon or Ogre Battle) where your character can "evolve" into a more interesting character class as they progress, e.g. "Adventurer" to "Wizard" to "Fire Magus".
+- [ ] Support for multiple "characters".
+  - [ ] The simple way: when you get your "character" to, say, Level 100, the app just starts a new one for you, and *that* character gets the points from now on.
+  - [ ] The more complicated way: The app can keep track of the "progress" of multiple "characters" at a time, and let you switch between them when you add a task, if you want to.
+- [ ] "Quests", i.e. tasks that the app will keep track of for you, and then you can log that you've completed them, or perhaps completed part of them.
+- [ ] History/Milestone log: A view that shows what tasks you entered on each day, and also when you hit certain "milestones", like `Reached Level 5!` or `Got Rare Diamond Axe!`
+- [ ] Deployment: A person who isn't me should be able to easily download, install, and run this thing.
 
 ## Why would you want to do that?
 
