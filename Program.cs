@@ -1,45 +1,23 @@
 ﻿using Terminal.Gui;
 
-Application.Run<ExampleWindow>();
+Application.Run<MainTaskEntryWindow>();
 
 var QuitCommands = new List<string> { "q", "quit", "exit" };
 
-// var command = args[0];
-// var commandArgs = args[1..];
-
-// do
-// {
-//     if (string.Equals(command, "record"))
-//     {
-//         var taskName = commandArgs[0];
-//         var score = int.Parse(commandArgs[1]);
-//         var result = Database.TestDatabase(taskName, score);
-//         Console.WriteLine(result);
-//     }
-//     else
-//     {
-//         Console.WriteLine($"Unrecognized command {command}");
-//     }
-//     Console.Clear();
-//     Console.WriteLine("Command?");
-//     var input = Console.ReadLine() ?? string.Empty;
-//     var inputArray = input.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-//     command = inputArray[0];
-//     commandArgs = inputArray[1..];
-// }
-// while (!QuitCommands.Contains(command, StringComparer.CurrentCultureIgnoreCase));
+// TODO Load the current character object from the database
+// TODO Maybe load other stuff from the database that we'll need later?
 
 Application.Shutdown();
 
 // Define a top-level window
-public class ExampleWindow : Window 
+public class MainTaskEntryWindow : Window 
 {
     internal TextField _taskText;
     internal TextField _scoreText;
     internal Label _messageArea;
-    public ExampleWindow()
+    public MainTaskEntryWindow()
     {
-        Title = "Example-fu";
+        Title = "DoQuest";
 
         var recordLabel = new Label()
         {
@@ -121,6 +99,10 @@ public class ExampleWindow : Window
         var greenColour = Application.Driver.MakeColor(Color.BrightYellow, Color.BrightGreen);
         _messageArea.ColorScheme = new ColorScheme() { Normal = greenColour };
         _messageArea.Text = $"Added {taskValue} (score: {scoreValue}) successfully.";
+
+        var character = Database.GetCurrentCharacter();
+        // TODO Levelator.CheckForLevelUp(newTotalScore);
+
         ResetForm();
     }
 

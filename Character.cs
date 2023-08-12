@@ -1,0 +1,1 @@
+public record Character(string Name, int Id, int Level, string Class, bool IsCurrent, DateTime CreatedDate);

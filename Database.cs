@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Microsoft.Data.Sqlite;
 
@@ -176,7 +177,7 @@ static class Database
         var avgDaysPerLevel = 3.65;
         // As the name implies, adjusting this value increases or decreases 
         // the "distance" between subsequent levels
-        var tweakableLevellingConstant = 24.25; 
+        var tweakableLevellingConstant = 24.25;
         for (int i = 2; i < 101; i++)
         {
             var score_required = (int)Math.Ceiling(meanPointsPerDay * avgDaysPerLevel * (1 + i / tweakableLevellingConstant));
@@ -240,7 +241,7 @@ static class Database
         }
 
         ValidateDatabase();
-        
+
         InsertTask(name, score);
 
         using var connection = new SqliteConnection(ConnectionString);
@@ -263,6 +264,38 @@ static class Database
         // then check if it exists to know that a given
         // database file has already been initialized.
 
+    }
+
+    /// <summary>
+    /// Get the currently active character's information from the database
+    /// </summary>
+    /// <returns>A Character record for the currently active character</returns>
+    public static Character GetCurrentCharacter()
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+        var queryCommand = connection.CreateCommand();
+        queryCommand.CommandText = """
+            SELECT id, name, level, class, is_current, created_date
+            FROM character
+            WHERE is_current = TRUE;
+        """;
+        using var reader = queryCommand.ExecuteReader();
+        var result = string.Empty;
+        // Advance the reader, then sanity check: We only expect there to be one is_current row
+        var moreRows = reader.Read();
+        if (moreRows)
+        {
+            throw new InvalidDataException("Multiple current characters!");
+        }
+        var id = reader.GetInt32(0);
+        var name = reader.GetString(1);
+        var level = reader.GetInt32(2);
+        var charClass = reader.GetString(3);
+        var isCurrent = reader.GetBoolean(4);
+        var createdDate = DateTime.ParseExact(reader.GetString(5), "O", CultureInfo.CurrentCulture);
+
+        return new Character(name, id, level, charClass, isCurrent, createdDate);
     }
 
     /// <summary>
