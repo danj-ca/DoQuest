@@ -5,6 +5,10 @@ Application.Run<MainTaskEntryWindow>();
 var QuitCommands = new List<string> { "q", "quit", "exit" };
 
 // TODO Load the current character object from the database
+var character = Database.GetCurrentCharacter();
+var charView = new CharacterView(character);
+Application.Current.Add(charView);
+
 // TODO Maybe load other stuff from the database that we'll need later?
 
 Application.Shutdown();
@@ -112,4 +116,18 @@ public class MainTaskEntryWindow : Window
         _scoreText.Text = string.Empty;
         _taskText.SetFocus();
     }
+}
+
+public class CharacterView : FrameView
+{
+    public CharacterView(Character c)
+    {
+        _character = c;
+        Title = _character.Name;
+        // TODO it would be neat to have like ASCII art for the character in here someday
+        var levelClassLabel = new Label { Text = $"Level {_character.Level} {_character.Class}" };
+
+        Add(levelClassLabel);
+    }
+    internal readonly Character _character;
 }

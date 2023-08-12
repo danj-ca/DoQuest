@@ -276,9 +276,10 @@ static class Database
         connection.Open();
         var queryCommand = connection.CreateCommand();
         queryCommand.CommandText = """
-            SELECT id, name, level, class, is_current, created_date
-            FROM character
-            WHERE is_current = TRUE;
+            SELECT c.id, c.name, c.level, cl.name AS class_name, c.is_current, c.created_date
+            FROM character c
+            JOIN class cl ON cl.id = c.class
+            WHERE c.is_current = TRUE;
         """;
         using var reader = queryCommand.ExecuteReader();
         var result = string.Empty;
