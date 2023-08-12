@@ -4,11 +4,14 @@ using Microsoft.Data.Sqlite;
 // TODO Pull initialization stuff into its own class, 
 //      only run it on startup if database doesn't exist
 //      (maybe ask user to confirm)
+// TODO Need a better way to change the database over time
+//      instead of starting over... might need to explore
+//      ways of doing proper migrations
 static class Database
 {
     const string DatabaseFileName = "test.sql";
     const string ConnectionString = $"Data Source={DatabaseFileName}";
-    const string DatabaseVersion = "0.1.0";
+    const string DatabaseVersion = "0.3.0";
     const string StaticLevelsTableDefinition = """
         CREATE TABLE levels (
             level INTEGER NOT NULL PRIMARY KEY,
@@ -41,19 +44,23 @@ static class Database
             min_score INTEGER NOT NULL,
             max_score INTEGER NOT NULL,
             value INTEGER NOT NULL,
+            rarity TEXT NOT NULL,
             power_id INTEGER REFERENCES powers (id),
             class_id INTEGER REFERENCES class (id)
         );
     """;
     const string StaticClassTableDefinition = """
-        CREATE TABLE class (
+        CREATE TABLE classes (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             description TEXT NOT NULL,
             min_level INTEGER,
+            required_treasure_id INTEGER REFERENCES treasure (id),
             power_id INTEGER REFERENCES powers (id),
             parent_class_id INTEGER REFERENCES class (id)
         );
+        INSERT INTO classes (id, name, description)
+        VALUES (1, 'Adventurer', 'You begin your life of adventure as an Adventurer... but who knows what you can become?');
     """;
     const string TasksTableDefinition = """
         CREATE TABLE tasks (
@@ -62,6 +69,16 @@ static class Database
             name TEXT NOT NULL,
             score INTEGER NOT NULL
         );
+    """;
+    const string CharactersTableDefinition = """
+        CREATE TABLE characters (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            created_date TEXT NOT NULL,
+            name TEXT NOT NULL,
+            level INTEGER NOT NULL DEFAULT 1,
+            is_current INTEGER NOT NULL DEFAULT TRUE,
+            class_id INTEGER REFERENCES class (id)  
+        )
     """;
     /// <summary>
     /// Since the purpose of this table is to store the current database version,
@@ -83,15 +100,29 @@ static class Database
         var command = connection.CreateCommand();
         command.CommandText = """
             SELECT version_number
-            FROM version
+            FROM version;
         """;
         var versionNumber = command.ExecuteScalar() as string;
         return (!string.IsNullOrWhiteSpace(versionNumber), versionNumber);
+    }
+    static bool CurrentCharacterExists()
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT id
+            FROM characters
+            WHERE is_current = TRUE;
+        """;
+        var currentCharacterId = command.ExecuteScalar() as int?;
+        return currentCharacterId.HasValue;
     }
 
     static void InitializeDatabase()
     {
         CreateTasksTable();
+        CreateCharactersTable();
         CreateStaticTables();
         CreateVersionTable();
     }
@@ -111,10 +142,9 @@ static class Database
         }
     }
 
-    static void CreateTasksTable()
-    {
-        CreateTable(TasksTableDefinition);
-    }
+    static void CreateTasksTable() => CreateTable(TasksTableDefinition);
+
+    static void CreateCharactersTable() => CreateTable(CharactersTableDefinition);
 
     static void CreateStaticTables()
     {
@@ -126,17 +156,27 @@ static class Database
         FillTreasureTable();
     }
 
+    /// <summary>
+    /// This method contains the algorithm used to determine how
+    /// many points are required to gain each level.
+    /// If we want to adjust the leveling curve, this is where to do it.
+    /// </summary>
     static void FillLevelsTable()
     {
         var valuesToInsert = new List<string>() { "(1,0)" };
         var sb = new StringBuilder();
         sb.AppendLine("INSERT INTO levels (level, score_required)");
         sb.AppendLine("VALUES");
-        
+
         // Current algo
+
+        // An estimate of how many points you'll record on an average day
         var meanPointsPerDay = 68.9;
+        // An estimate of how many days it ought to take to gain a level
         var avgDaysPerLevel = 3.65;
-        var tweakableLevellingConstant = 24.25;
+        // As the name implies, adjusting this value increases or decreases 
+        // the "distance" between subsequent levels
+        var tweakableLevellingConstant = 24.25; 
         for (int i = 2; i < 101; i++)
         {
             var score_required = (int)Math.Ceiling(meanPointsPerDay * avgDaysPerLevel * (1 + i / tweakableLevellingConstant));
@@ -151,7 +191,25 @@ static class Database
         command.ExecuteNonQuery();
     }
     static void FillTreasureTable() { }
+    static void CreateCharacter()
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO characters (name, class_id, created_date)
+            VALUES ($name, HERO CLASS ID..., $created_date);
+        """;
+        command.Parameters.AddWithValue("$created_date", DateTime.Now.ToString("O"));
+        command.Parameters.AddWithValue("$name", GenerateCharacterName());
+        command.ExecuteNonQuery();
+    }
 
+    private static string GenerateCharacterName()
+    {
+        // TODO Random fantasy name generator goes here
+        return "Bob";
+    }
 
     static void CreateVersionTable()
     {
