@@ -11,22 +11,22 @@ static class Database
 {
     const string DatabaseFileName = "test.sql";
     const string ConnectionString = $"Data Source={DatabaseFileName}";
-    const string DatabaseVersion = "0.3.0";
-    const string StaticLevelsTableDefinition = """
-        CREATE TABLE levels (
+    const string DatabaseVersion = "0.4.0";
+    const string StaticLevelTableDefinition = """
+        CREATE TABLE level (
             level INTEGER NOT NULL PRIMARY KEY,
             score_required INTEGER NOT NULL
         );
     """;
     // TODO If we're gonna define static contents in these strings,
     //      they should probably get stuck in their own files at some point.
-    const string StaticPowersTableDefinition = """
-        CREATE TABLE powers (
+    const string StaticPowerTableDefinition = """
+        CREATE TABLE power (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             colour TEXT NOT NULL
         );
-        INSERT INTO powers (name, colour)
+        INSERT INTO power (name, colour)
         VALUES ('Creation', 'Cyan'),
                ('Destruction', 'Magenta'),
                ('Light', 'White'),
@@ -45,39 +45,39 @@ static class Database
             max_score INTEGER NOT NULL,
             value INTEGER NOT NULL,
             rarity TEXT NOT NULL,
-            power_id INTEGER REFERENCES powers (id),
+            power_id INTEGER REFERENCES power (id),
             class_id INTEGER REFERENCES class (id)
         );
     """;
     const string StaticClassTableDefinition = """
-        CREATE TABLE classes (
+        CREATE TABLE class (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             description TEXT NOT NULL,
             min_level INTEGER,
             required_treasure_id INTEGER REFERENCES treasure (id),
-            power_id INTEGER REFERENCES powers (id),
+            power_id INTEGER REFERENCES power (id),
             parent_class_id INTEGER REFERENCES class (id)
         );
-        INSERT INTO classes (id, name, description)
+        INSERT INTO class (id, name, description)
         VALUES (1, 'Adventurer', 'You begin your life of adventure as an Adventurer... but who knows what you can become?');
     """;
-    const string TasksTableDefinition = """
-        CREATE TABLE tasks (
+    const string TaskTableDefinition = """
+        CREATE TABLE task (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT NOT NULL,
             name TEXT NOT NULL,
             score INTEGER NOT NULL
         );
     """;
-    const string CharactersTableDefinition = """
-        CREATE TABLE characters (
+    const string CharacterTableDefinition = """
+        CREATE TABLE character (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             created_date TEXT NOT NULL,
             name TEXT NOT NULL,
             level INTEGER NOT NULL DEFAULT 1,
             is_current INTEGER NOT NULL DEFAULT TRUE,
-            class_id INTEGER REFERENCES class (id)  
+            class_id INTEGER NOT NULL DEFAULT 1 REFERENCES class (id)  
         )
     """;
     /// <summary>
@@ -112,7 +112,7 @@ static class Database
         var command = connection.CreateCommand();
         command.CommandText = """
             SELECT id
-            FROM characters
+            FROM character
             WHERE is_current = TRUE;
         """;
         var currentCharacterId = command.ExecuteScalar() as int?;
@@ -121,8 +121,8 @@ static class Database
 
     static void InitializeDatabase()
     {
-        CreateTasksTable();
-        CreateCharactersTable();
+        CreateTaskTable();
+        CreateCharacterTable();
         CreateStaticTables();
         CreateVersionTable();
     }
@@ -142,15 +142,15 @@ static class Database
         }
     }
 
-    static void CreateTasksTable() => CreateTable(TasksTableDefinition);
+    static void CreateTaskTable() => CreateTable(TaskTableDefinition);
 
-    static void CreateCharactersTable() => CreateTable(CharactersTableDefinition);
+    static void CreateCharacterTable() => CreateTable(CharacterTableDefinition);
 
     static void CreateStaticTables()
     {
-        CreateTable(StaticLevelsTableDefinition);
-        FillLevelsTable();
-        CreateTable(StaticPowersTableDefinition);
+        CreateTable(StaticLevelTableDefinition);
+        FillLevelTable();
+        CreateTable(StaticPowerTableDefinition);
         CreateTable(StaticClassTableDefinition);
         CreateTable(StaticTreasureTableDefinition);
         FillTreasureTable();
@@ -161,11 +161,11 @@ static class Database
     /// many points are required to gain each level.
     /// If we want to adjust the leveling curve, this is where to do it.
     /// </summary>
-    static void FillLevelsTable()
+    static void FillLevelTable()
     {
         var valuesToInsert = new List<string>() { "(1,0)" };
         var sb = new StringBuilder();
-        sb.AppendLine("INSERT INTO levels (level, score_required)");
+        sb.AppendLine("INSERT INTO level (level, score_required)");
         sb.AppendLine("VALUES");
 
         // Current algo
@@ -197,8 +197,8 @@ static class Database
         connection.Open();
         var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO characters (name, class_id, created_date)
-            VALUES ($name, HERO CLASS ID..., $created_date);
+            INSERT INTO character (name, created_date)
+            VALUES ($name, $created_date);
         """;
         command.Parameters.AddWithValue("$created_date", DateTime.Now.ToString("O"));
         command.Parameters.AddWithValue("$name", GenerateCharacterName());
@@ -248,7 +248,7 @@ static class Database
         var queryCommand = connection.CreateCommand();
         queryCommand.CommandText = """
             SELECT id, timestamp, name, score
-            FROM tasks
+            FROM task
         """;
         using var reader = queryCommand.ExecuteReader();
         var result = string.Empty;
@@ -276,7 +276,7 @@ static class Database
         connection.Open();
         var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO tasks (timestamp, name, score)
+            INSERT INTO task (timestamp, name, score)
             VALUES ($timestamp, $name, $score);
         """;
         command.Parameters.AddWithValue("$timestamp", DateTime.Now.ToString("O"));
