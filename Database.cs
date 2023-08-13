@@ -10,9 +10,9 @@ using Microsoft.Data.Sqlite;
 //      ways of doing proper migrations
 static class Database
 {
-    const string DatabaseFileName = "test.sql";
+    const string DatabaseFileName = "DoQuest.sql";
     const string ConnectionString = $"Data Source={DatabaseFileName}";
-    const string DatabaseVersion = "0.4.0";
+    const string DatabaseVersion = "0.5.0";
     const string StaticLevelTableDefinition = """
         CREATE TABLE level (
             level INTEGER NOT NULL PRIMARY KEY,
@@ -45,10 +45,12 @@ static class Database
             min_score INTEGER NOT NULL,
             max_score INTEGER NOT NULL,
             value INTEGER NOT NULL,
-            rarity TEXT NOT NULL,
-            power_id INTEGER REFERENCES power (id),
-            class_id INTEGER REFERENCES class (id)
+            rarity TEXT NOT NULL
         );
+    """;
+    const string StaticTreasureForeignKeyAdditions = """
+        ALTER TABLE treasure ADD COLUMN power_id INTEGER REFERENCES power (id);
+        ALTER TABLE treasure ADD COLUMN required_class_id INTEGER REFERENCES class (id);
     """;
     const string StaticClassTableDefinition = """
         CREATE TABLE class (
@@ -56,12 +58,14 @@ static class Database
             name TEXT NOT NULL,
             description TEXT NOT NULL,
             min_level INTEGER,
-            required_treasure_id INTEGER REFERENCES treasure (id),
-            power_id INTEGER REFERENCES power (id),
             parent_class_id INTEGER REFERENCES class (id)
         );
         INSERT INTO class (id, name, description)
         VALUES (1, 'Adventurer', 'You begin your life of adventure as an Adventurer... but who knows what you can become?');
+    """;
+    const string StaticClassForeignKeyAdditions = """
+        ALTER TABLE class ADD COLUMN power_id INTEGER REFERENCES power (id);
+        ALTER TABLE class ADD COLUMN required_treasure_id INTEGER REFERENCES treasure (id);
     """;
     const string TaskTableDefinition = """
         CREATE TABLE task (
@@ -116,15 +120,15 @@ static class Database
             FROM character
             WHERE is_current = TRUE;
         """;
-        var currentCharacterId = command.ExecuteScalar() as int?;
+        var currentCharacterId = command.ExecuteScalar() as Nullable<Int64>;
         return currentCharacterId.HasValue;
     }
 
     static void InitializeDatabase()
     {
+        CreateStaticTables();
         CreateTaskTable();
         CreateCharacterTable();
-        CreateStaticTables();
         CreateVersionTable();
     }
 
@@ -143,17 +147,23 @@ static class Database
         }
     }
 
-    static void CreateTaskTable() => CreateTable(TaskTableDefinition);
+    static void CreateTaskTable() => ExecuteNonQuery(TaskTableDefinition);
 
-    static void CreateCharacterTable() => CreateTable(CharacterTableDefinition);
+    static void CreateCharacterTable() => ExecuteNonQuery(CharacterTableDefinition);
 
     static void CreateStaticTables()
     {
-        CreateTable(StaticLevelTableDefinition);
+        ExecuteNonQuery(StaticLevelTableDefinition);
         FillLevelTable();
-        CreateTable(StaticPowerTableDefinition);
-        CreateTable(StaticClassTableDefinition);
-        CreateTable(StaticTreasureTableDefinition);
+        ExecuteNonQuery(StaticPowerTableDefinition);
+        ExecuteNonQuery(StaticClassTableDefinition);
+        ExecuteNonQuery(StaticTreasureTableDefinition);
+        // Since some of the static tables reference each other,
+        // we can't add their foreign key columns at creation time!
+        ExecuteNonQuery(StaticClassForeignKeyAdditions);
+        ExecuteNonQuery(StaticTreasureForeignKeyAdditions);
+        // At last, fill the static tables whose contents are non-trivial
+        FillClassTable();
         FillTreasureTable();
     }
 
@@ -191,6 +201,9 @@ static class Database
         command.CommandText = sb.ToString();
         command.ExecuteNonQuery();
     }
+    // TODO Lay out the classes in some data structure and insert from there; beats hard coding them all in a SQL string!
+    static void FillClassTable() { }
+    // TODO Procedurally generate treasure? Or use data structures as for Class...
     static void FillTreasureTable() { }
     static void CreateCharacter()
     {
@@ -222,12 +235,12 @@ static class Database
         command.ExecuteNonQuery();
     }
 
-    static void CreateTable(string createSql)
+    static void ExecuteNonQuery(string sql)
     {
         using var connection = new SqliteConnection(ConnectionString);
         connection.Open();
         var command = connection.CreateCommand();
-        command.CommandText = createSql;
+        command.CommandText = sql;
         command.ExecuteNonQuery();
     }
 
@@ -278,7 +291,7 @@ static class Database
         queryCommand.CommandText = """
             SELECT c.id, c.name, c.level, cl.name AS class_name, c.is_current, c.created_date
             FROM character c
-            JOIN class cl ON cl.id = c.class
+            JOIN class cl ON cl.id = c.class_id
             WHERE c.is_current = TRUE;
         """;
         using var reader = queryCommand.ExecuteReader();
@@ -317,5 +330,24 @@ static class Database
         command.Parameters.AddWithValue("$name", name);
         command.Parameters.AddWithValue("$score", score);
         command.ExecuteNonQuery();
+    }
+
+    public static void Startup()
+    {
+        // check for database file exists
+        // if not exists, create it
+        if (!DatabaseFileExists())
+        {
+            InitializeDatabase();
+        }
+        // if exists, validate it
+        ValidateDatabase();
+        // if not valid, raise error to be reported
+        // if no current character exists... create one? or report and let user interact?
+        if (!CurrentCharacterExists())
+        {
+            CreateCharacter();
+        }
+        // if valid database and current character, return success - or, this method should be a no-op from the DB and UI perspective
     }
 }
