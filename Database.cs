@@ -85,10 +85,22 @@ static class Database
             class_id INTEGER NOT NULL DEFAULT 1 REFERENCES class (id)  
         )
     """;
-    const string TaskCharacterTableDefinition = """
-        CREATE TABLE task_character (
-            task_id INTEGER NOT NULL REFERENCES task (id),
-            character_id INTEGER NOT NULL REFERENCES character (id)
+    const string CharacterTaskTableDefinition = """
+        CREATE TABLE character_task (
+            character_id INTEGER NOT NULL REFERENCES character (id),
+            task_id INTEGER NOT NULL REFERENCES task (id)
+        )
+    """;
+    /// <summary>
+    /// NOTE: This link table needs a surrogate key because a character
+    /// can logically earn a treasure (e.g. a Flawless Diamond)
+    /// more than once.
+    /// </summary>
+    const string CharacterTreasureTableDefinition = """
+        CREATE TABLE character_treasure (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            character_id INTEGER NOT NULL REFERENCES character (id),
+            treasure_id INTEGER NOT NULL REFERENCES treasure (id)
         )
     """;
 
@@ -136,7 +148,8 @@ static class Database
         CreateStaticTables();
         CreateTaskTable();
         CreateCharacterTable();
-        CreateTaskCharacterTable();
+        CreateCharacterTaskTable();
+        CreateCharacterTreasureTable();
         CreateVersionTable();
     }
 
@@ -157,7 +170,8 @@ static class Database
 
     static void CreateTaskTable() => ExecuteNonQuery(TaskTableDefinition);
     static void CreateCharacterTable() => ExecuteNonQuery(CharacterTableDefinition);
-    static void CreateTaskCharacterTable() => ExecuteNonQuery(TaskCharacterTableDefinition);
+    static void CreateCharacterTaskTable() => ExecuteNonQuery(CharacterTaskTableDefinition);
+    static void CreateCharacterTreasureTable() => ExecuteNonQuery(CharacterTreasureTableDefinition);
 
     static void CreateStaticTables()
     {
@@ -252,41 +266,6 @@ static class Database
         command.ExecuteNonQuery();
     }
 
-
-
-    public static string TestDatabase(string name, int score)
-    {
-        if (!DatabaseFileExists())
-        {
-            InitializeDatabase();
-        }
-
-        ValidateDatabase();
-
-        InsertTask(name, score);
-
-        using var connection = new SqliteConnection(ConnectionString);
-        connection.Open();
-        var queryCommand = connection.CreateCommand();
-        queryCommand.CommandText = """
-            SELECT id, timestamp, name, score
-            FROM task
-        """;
-        using var reader = queryCommand.ExecuteReader();
-        var result = string.Empty;
-        while (reader.Read())
-        {
-            result = $"{reader.GetInt32(0)} // {reader.GetString(1)} // {reader.GetString(2)} // {reader.GetInt32(3)}";
-        }
-
-        return result;
-
-        // last thing to create is a "Version" table
-        // then check if it exists to know that a given
-        // database file has already been initialized.
-
-    }
-
     /// <summary>
     /// Get the currently active character's information from the database
     /// </summary>
@@ -327,7 +306,11 @@ static class Database
     /// </summary>
     /// <param name="name">Description of the task</param>
     /// <param name="score">The task's "score" value as a positive integer</param>
-    public static void InsertTask(string name, int score)
+    /// <param name="characterId">
+    /// The ID of the currently active character,
+    /// to whom this task should be associated.
+    /// </param>
+    public static void InsertTask(string name, int score, int characterId)
     {
         using var connection = new SqliteConnection(ConnectionString);
         connection.Open();
@@ -338,14 +321,35 @@ static class Database
             INSERT INTO task (timestamp, name, score)
             VALUES ($timestamp, $name, $score);
 
-            INSERT INTO task_character (task_id, character_id)
-            VALUES ((SELECT last_insert_rowid()), (SELECT id FROM character WHERE is_current = TRUE));
+            INSERT INTO character_task (task_id, character_id)
+            VALUES ((SELECT last_insert_rowid()), $character_id);
 
             COMMIT TRANSACTION;
         """;
         command.Parameters.AddWithValue("$timestamp", DateTime.Now.ToString("O"));
         command.Parameters.AddWithValue("$name", name);
         command.Parameters.AddWithValue("$score", score);
+        command.Parameters.AddWithValue("$character_id", characterId);
+        command.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Creates a link record assigning an instance of a given treasure
+    /// to the currently active character
+    /// </summary>
+    /// <param name="characterId">ID of the currently active character</param>
+    /// <param name="treasureId">ID of a treasure to award to the character</param>
+    public static void AwardTreasure(int characterId, int treasureId)
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO character_treasure (character_id, treasure_id)
+            VALUES ($character_id, $treasure_id);
+        """;
+        command.Parameters.AddWithValue("$treasure_id", treasureId);
+        command.Parameters.AddWithValue("$character_id", characterId);
         command.ExecuteNonQuery();
     }
 

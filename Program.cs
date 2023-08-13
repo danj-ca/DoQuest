@@ -12,6 +12,7 @@ public class MainTaskEntryWindow : Window
     internal TextField _taskText;
     internal TextField _scoreText;
     internal Label _messageArea;
+    internal Character _currentCharacter;
     public MainTaskEntryWindow()
     {
         Title = "DoQuest";
@@ -64,16 +65,16 @@ public class MainTaskEntryWindow : Window
 
         // TODO Loading data in the window's ctor seems like not a great idea...
         // ...but I haven't yet figured out how best to do otherwise, given Terminal.Gui's docs!
-        var character = Database.GetCurrentCharacter();
+        _currentCharacter = Database.GetCurrentCharacter();
         // TODO Adding a subview like this with its own subviews doesn't get displayed and I'm not sure why
-        var charView = new CharacterView(character)
+        var charView = new CharacterView(_currentCharacter)
         {
             X = Pos.At(1),
             Y = Pos.Bottom(addButton)
         };
         var testLabel = new Label
         {
-            Text = $"Level {character.Level} {character.Class}",
+            Text = $"Level {_currentCharacter.Level} {_currentCharacter.Class}",
             X = Pos.At(1),
             Y = Pos.Bottom(addButton)
         };
@@ -106,14 +107,17 @@ public class MainTaskEntryWindow : Window
         }
 
         // TODO Add error handling in case adding to the db doesn't work
-        Database.InsertTask(taskValue, scoreValue);
+        Database.InsertTask(taskValue, scoreValue, _currentCharacter.Id);
+        
+        // TODO Award treasure!
 
         // TODO Maybe select it back out and print the result from the database here
         var greenColour = Application.Driver.MakeColor(Color.BrightYellow, Color.BrightGreen);
         _messageArea.ColorScheme = new ColorScheme() { Normal = greenColour };
         _messageArea.Text = $"Added {taskValue} (score: {scoreValue}) successfully.";
 
-        var character = Database.GetCurrentCharacter();
+        // Refresh current character...
+        _currentCharacter = Database.GetCurrentCharacter();
         // TODO Levelator.CheckForLevelUp(newTotalScore);
 
         ResetForm();
