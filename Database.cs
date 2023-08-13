@@ -12,7 +12,7 @@ static class Database
 {
     const string DatabaseFileName = "DoQuest.sql";
     const string ConnectionString = $"Data Source={DatabaseFileName}";
-    const string DatabaseVersion = "0.5.0";
+    const string DatabaseVersion = "0.6.0";
     const string StaticLevelTableDefinition = """
         CREATE TABLE level (
             level INTEGER NOT NULL PRIMARY KEY,
@@ -85,6 +85,13 @@ static class Database
             class_id INTEGER NOT NULL DEFAULT 1 REFERENCES class (id)  
         )
     """;
+    const string TaskCharacterTableDefinition = """
+        CREATE TABLE task_character (
+            task_id INTEGER NOT NULL REFERENCES task (id),
+            character_id INTEGER NOT NULL REFERENCES character (id)
+        )
+    """;
+
     /// <summary>
     /// Since the purpose of this table is to store the current database version,
     /// create the table and insert the version in one command
@@ -129,6 +136,7 @@ static class Database
         CreateStaticTables();
         CreateTaskTable();
         CreateCharacterTable();
+        CreateTaskCharacterTable();
         CreateVersionTable();
     }
 
@@ -148,8 +156,8 @@ static class Database
     }
 
     static void CreateTaskTable() => ExecuteNonQuery(TaskTableDefinition);
-
     static void CreateCharacterTable() => ExecuteNonQuery(CharacterTableDefinition);
+    static void CreateTaskCharacterTable() => ExecuteNonQuery(TaskCharacterTableDefinition);
 
     static void CreateStaticTables()
     {
@@ -325,8 +333,15 @@ static class Database
         connection.Open();
         var command = connection.CreateCommand();
         command.CommandText = """
+            BEGIN TRANSACTION;
+
             INSERT INTO task (timestamp, name, score)
             VALUES ($timestamp, $name, $score);
+
+            INSERT INTO task_character (task_id, character_id)
+            VALUES ((SELECT last_insert_rowid()), (SELECT id FROM character WHERE is_current = TRUE));
+
+            COMMIT TRANSACTION;
         """;
         command.Parameters.AddWithValue("$timestamp", DateTime.Now.ToString("O"));
         command.Parameters.AddWithValue("$name", name);
