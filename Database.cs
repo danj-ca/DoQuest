@@ -295,19 +295,21 @@ static class Database
             WHERE c.is_current = TRUE;
         """;
         using var reader = queryCommand.ExecuteReader();
-        var result = string.Empty;
-        // Advance the reader, then sanity check: We only expect there to be one is_current row
-        var moreRows = reader.Read();
-        if (moreRows)
-        {
-            throw new InvalidDataException("Multiple current characters!");
-        }
+        reader.Read();
+
         var id = reader.GetInt32(0);
         var name = reader.GetString(1);
         var level = reader.GetInt32(2);
         var charClass = reader.GetString(3);
         var isCurrent = reader.GetBoolean(4);
         var createdDate = DateTime.ParseExact(reader.GetString(5), "O", CultureInfo.CurrentCulture);
+
+        // Sanity check: We only expect there to be one is_current row
+        var moreRows = reader.Read();
+        if (moreRows)
+        {
+            throw new InvalidDataException("There are multiple current characters in the database!");
+        }
 
         return new Character(name, id, level, charClass, isCurrent, createdDate);
     }

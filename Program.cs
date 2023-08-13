@@ -1,15 +1,8 @@
 ﻿using Terminal.Gui;
 
+Database.Startup();
+
 Application.Run<MainTaskEntryWindow>();
-
-var QuitCommands = new List<string> { "q", "quit", "exit" };
-
-// TODO Load the current character object from the database
-var character = Database.GetCurrentCharacter();
-var charView = new CharacterView(character);
-Application.Current.Add(charView);
-
-// TODO Maybe load other stuff from the database that we'll need later?
 
 Application.Shutdown();
 
@@ -69,7 +62,23 @@ public class MainTaskEntryWindow : Window
             Y = Pos.AnchorEnd(1)
         };
 
-        Add(recordLabel, _taskText, scoreLabel, _scoreText, addButton, quitButton, _messageArea);
+        // TODO Loading data in the window's ctor seems like not a great idea...
+        // ...but I haven't yet figured out how best to do otherwise, given Terminal.Gui's docs!
+        var character = Database.GetCurrentCharacter();
+        // TODO Adding a subview like this with its own subviews doesn't get displayed and I'm not sure why
+        var charView = new CharacterView(character)
+        {
+            X = Pos.At(1),
+            Y = Pos.Bottom(addButton)
+        };
+        var testLabel = new Label
+        {
+            Text = $"Level {character.Level} {character.Class}",
+            X = Pos.At(1),
+            Y = Pos.Bottom(addButton)
+        };
+
+        Add(recordLabel, _taskText, scoreLabel, _scoreText, addButton, quitButton, _messageArea, testLabel);
     }
 
     private void RecordNewTask()
