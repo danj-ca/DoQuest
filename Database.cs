@@ -380,4 +380,34 @@ static class Database
         }
         // if valid database and current character, return success - or, this method should be a no-op from the DB and UI perspective
     }
+
+    internal static int GetScoreNeededForLevel(int nextLevel)
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT score_required
+            FROM level
+            WHERE level = $level;
+        """;
+        command.Parameters.AddWithValue("$level", nextLevel);
+        var scoreRequired = command.ExecuteScalar() as Nullable<Int32>;
+        return scoreRequired.Value;
+    }
+
+    internal static void SetCharacterLevel(int characterId, int nextLevel)
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE character
+            SET level = $next_level
+            WHERE id = $character_id;
+        """;
+        command.Parameters.AddWithValue("$next_level", nextLevel);
+        command.Parameters.AddWithValue("$character_id", characterId);
+        command.ExecuteNonQuery();
+    }
 }

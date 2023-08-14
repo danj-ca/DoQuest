@@ -118,7 +118,7 @@ public class MainTaskEntryWindow : Window
 
         // Refresh current character...
         _currentCharacter = Database.GetCurrentCharacter();
-        // TODO Levelator.CheckForLevelUp(newTotalScore);
+        Levelator.CheckForLevelUp(_currentCharacter);
 
         ResetForm();
     }

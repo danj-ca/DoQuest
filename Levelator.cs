@@ -7,15 +7,17 @@ static class Levelator
     /// 
     /// </summary>
     /// <param name="score">TODO Maybe this should be passed a Character object</param>
-    public static void CheckForLevelUp(int score)
+    public static void CheckForLevelUp(Character character)
     {
-        /*
-         - Get level thresholds from database
-         - Get character's current level...
-         - See if new score qualifies them for a new level
-         - Update the character level to the new level
-         - Activate... whatever other behaviour should accompany a level up
-         - Report all of this to the User Interface somehow
-         */
+        var nextLevel = character.Level + 1;
+        // TODO if it's 100, need to level up the character AND retire them!
+        var scoreNeeded = Database.GetScoreNeededForLevel(nextLevel);
+        if (character.TotalScore >= scoreNeeded)
+        {
+            // TODO Like, do level up stuff!
+            Database.SetCharacterLevel(character.Id, nextLevel);
+            // -Activate... whatever other behaviour should accompany a level up
+            // -Report all of this to the User Interface somehow
+        }
     }
 }

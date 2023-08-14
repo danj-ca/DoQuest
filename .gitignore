@@ -3,7 +3,8 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
-# Exclude database files we generate while testing
+# Exclude database files and exports we generate while testing
+*.csv
 *.sql
 
 # User-specific files
