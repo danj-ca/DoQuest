@@ -392,8 +392,8 @@ static class Database
             WHERE level = $level;
         """;
         command.Parameters.AddWithValue("$level", nextLevel);
-        var scoreRequired = command.ExecuteScalar() as Nullable<Int32>;
-        return scoreRequired.Value;
+        var scoreRequired = command.ExecuteScalar() as Nullable<Int64>;
+        return (int) scoreRequired.Value;
     }
 
     internal static void SetCharacterLevel(int characterId, int nextLevel)
