@@ -12,7 +12,7 @@ static class Database
 {
     const string DatabaseFileName = "DoQuest.sql";
     const string ConnectionString = $"Data Source={DatabaseFileName}";
-    const string DatabaseVersion = "0.6.0";
+    const string DatabaseVersion = "0.7.0";
     const string StaticLevelTableDefinition = """
         CREATE TABLE level (
             level INTEGER NOT NULL PRIMARY KEY,
@@ -210,10 +210,12 @@ static class Database
         // As the name implies, adjusting this value increases or decreases 
         // the "distance" between subsequent levels
         var tweakableLevellingConstant = 24.25;
+        var previousScoreRequired = 0;
         for (int i = 2; i < 101; i++)
         {
-            var score_required = (int)Math.Ceiling(meanPointsPerDay * avgDaysPerLevel * (1 + i / tweakableLevellingConstant));
-            valuesToInsert.Add($"({i},{score_required})");
+            var scoreRequired = previousScoreRequired + (int)Math.Ceiling(meanPointsPerDay * avgDaysPerLevel * (1 + i / tweakableLevellingConstant));
+            valuesToInsert.Add($"({i},{scoreRequired})");
+            previousScoreRequired = scoreRequired;
         }
         sb.AppendJoin(',', valuesToInsert);
 
@@ -276,9 +278,15 @@ static class Database
         connection.Open();
         var queryCommand = connection.CreateCommand();
         queryCommand.CommandText = """
-            SELECT c.id, c.name, c.level, cl.name AS class_name, c.is_current, c.created_date
+            SELECT c.id, c.name, c.level, COALESCE(ts.total_score, 0) AS total_score, cl.name AS class_name, c.is_current, c.created_date
             FROM character c
             JOIN class cl ON cl.id = c.class_id
+            LEFT JOIN (
+                SELECT ct.character_id, SUM(t.score) AS total_score
+                FROM character_task ct
+                JOIN task t ON t.id = ct.task_id
+                GROUP BY ct.character_id
+            ) ts ON ts.character_id = c.id
             WHERE c.is_current = TRUE;
         """;
         using var reader = queryCommand.ExecuteReader();
@@ -287,9 +295,10 @@ static class Database
         var id = reader.GetInt32(0);
         var name = reader.GetString(1);
         var level = reader.GetInt32(2);
-        var charClass = reader.GetString(3);
-        var isCurrent = reader.GetBoolean(4);
-        var createdDate = DateTime.ParseExact(reader.GetString(5), "O", CultureInfo.CurrentCulture);
+        var totalScore = reader.GetInt32(3);
+        var charClass = reader.GetString(4);
+        var isCurrent = reader.GetBoolean(5);
+        var createdDate = DateTime.ParseExact(reader.GetString(6), "O", CultureInfo.CurrentCulture);
 
         // Sanity check: We only expect there to be one is_current row
         var moreRows = reader.Read();
@@ -298,7 +307,7 @@ static class Database
             throw new InvalidDataException("There are multiple current characters in the database!");
         }
 
-        return new Character(name, id, level, charClass, isCurrent, createdDate);
+        return new Character(name, id, level, totalScore, charClass, isCurrent, createdDate);
     }
 
     /// <summary>
