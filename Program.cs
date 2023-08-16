@@ -1,4 +1,5 @@
-﻿using Terminal.Gui;
+﻿using System.Text;
+using Terminal.Gui;
 
 Database.Startup();
 
@@ -13,6 +14,7 @@ public class MainTaskEntryWindow : Window
     internal TextField _scoreText;
     internal Label _messageArea;
     internal Character _currentCharacter;
+    internal Label _characterLabel;
     public MainTaskEntryWindow()
     {
         Title = "DoQuest";
@@ -60,7 +62,7 @@ public class MainTaskEntryWindow : Window
 
         _messageArea = new Label()
         {
-            Y = Pos.AnchorEnd(1)
+            Y = Pos.AnchorEnd(2)
         };
 
         // TODO Loading data in the window's ctor seems like not a great idea...
@@ -72,14 +74,14 @@ public class MainTaskEntryWindow : Window
             X = Pos.At(1),
             Y = Pos.Bottom(addButton)
         };
-        var testLabel = new Label
+        _characterLabel = new Label
         {
-            Text = $"Level {_currentCharacter.Level} {_currentCharacter.Class}",
+            Text = $"Level {_currentCharacter.Level} {_currentCharacter.Class} (Total Score: {_currentCharacter.TotalScore})",
             X = Pos.At(1),
             Y = Pos.Bottom(addButton)
         };
 
-        Add(recordLabel, _taskText, scoreLabel, _scoreText, addButton, quitButton, _messageArea, testLabel);
+        Add(recordLabel, _taskText, scoreLabel, _scoreText, addButton, quitButton, _messageArea, _characterLabel);
     }
 
     private void RecordNewTask()
@@ -116,9 +118,20 @@ public class MainTaskEntryWindow : Window
         _messageArea.ColorScheme = new ColorScheme() { Normal = greenColour };
         _messageArea.Text = $"Added {taskValue} (score: {scoreValue}) successfully.";
 
-        // Refresh current character...
+        // Update current character if necessary, then refresh character from DB
+        var (leveledUp, newLevel) = Levelator.CheckForLevelUp(_currentCharacter);
+
+        if (leveledUp)
+        {
+            var newMessage = new StringBuilder(_messageArea.Text.ToString());
+            newMessage.AppendLine();
+            newMessage.Append($"🥳 {_currentCharacter.Name} reached Level {newLevel}! ✨");
+            _messageArea.Text = newMessage.ToString();
+        }
+
         _currentCharacter = Database.GetCurrentCharacter();
-        Levelator.CheckForLevelUp(_currentCharacter);
+        _characterLabel.Text = $"Level {_currentCharacter.Level} {_currentCharacter.Class} (Total Score: {_currentCharacter.TotalScore})";
+
 
         ResetForm();
     }
